@@ -1,0 +1,15 @@
+.venv/
+venv/
+.DS_Store
+.Rhistory
+__pycache__/
+*.pyc
+
+ml/dataset/
+ml/test_dataset/
+ml/test_image.jpg
+ml/trashnet-dataset/
+
+ml/*.keras
+ml/*.h5
+ml/*.tflite
