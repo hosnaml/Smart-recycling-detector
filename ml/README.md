@@ -17,7 +17,7 @@ The current model classifies waste into six categories:
 
 The current training pipeline uses selected classes from the Merged Waste Classification Dataset (MWCD).
 
-The original MWCD dataset contains nine classes. For the current project, only six classes were selected:
+The original MWCD dataset contains nine classes. For the current project, six classes were selected:
 
 - Cardboard
 - Glass
@@ -48,6 +48,7 @@ The dataset is split into:
 - 20% validation data
 
 A fixed random seed is used so that the same train/validation split can be reproduced.
+
 The dataset itself is not included in the Git repository.
 
 ## Model
@@ -110,7 +111,7 @@ The trained model file is not included in the Git repository.
 
 ## Testing
 
-`test_model.py` loads the trained MWCD model and can be used to make predictions on the independent test images.
+`test_model.py` loads the trained MWCD model and can be used to make predictions on test images.
 
 For each image, the script displays:
 
@@ -123,9 +124,13 @@ The test images are stored locally in the `test_dataset` folder and are not incl
 
 ## Evaluation
 
-Model evaluation is handled separately from the training pipeline.
+Model evaluation is handled separately using `evaluate_model.py`.
 
-The baseline model will be evaluated using overall validation performance, per-class performance, and a confusion matrix. A separate real-world test dataset will also be used later to evaluate how well the model generalizes to images outside the training dataset.
+The evaluation includes:
+
+- Overall model performance
+- Per-class accuracy
+- Confusion matrix
 
 ## Previous Prototype
 
@@ -136,3 +141,9 @@ An earlier version of the training pipeline used three classes from the TrashNet
 - Plastic
 
 This smaller dataset was used to verify that the initial MobileNetV2 training and prediction pipeline worked before moving to the larger MWCD dataset.
+
+## Baseline Evaluation
+
+Baseline model performance, per-class accuracy, and the confusion matrix are documented in:
+
+[BASELINE_RESULTS.md](BASELINE_RESULTS.md)
