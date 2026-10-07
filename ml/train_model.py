@@ -1,10 +1,13 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from pathlib import Path
 
+# Folder where this Python file is located
+ML_DIR = Path(__file__).parent
 
-# Path to the folder containing our image classes
-DATASET_PATH = "dataset"
+# Path to the MWCD dataset
+DATASET_PATH = ML_DIR / "dataset_mwcd"
 
 # MobileNetV2 expected size
 IMAGE_SIZE = (224, 224)
@@ -12,13 +15,16 @@ IMAGE_SIZE = (224, 224)
 # Number of images processed at one time during training
 BATCH_SIZE = 32
 
+# Random seed so we get the same train/validation split each time
+SEED = 123
+
 
 # Load the training dataset
 train_dataset = keras.utils.image_dataset_from_directory(
     DATASET_PATH,
-    validation_split=0.2,   #splits dataset into 20% validation rest for testing
+    validation_split=0.2,   #splits dataset into 20% validation rest for training
     subset="training",
-    seed=123,
+    seed=SEED,
     image_size=IMAGE_SIZE,
     batch_size=BATCH_SIZE
 )
@@ -28,13 +34,18 @@ validation_dataset = keras.utils.image_dataset_from_directory(
     DATASET_PATH,
     validation_split=0.2,
     subset="validation",
-    seed=123,
+    seed=SEED,
     image_size=IMAGE_SIZE,
     batch_size=BATCH_SIZE
 )
 
-# Show the class names TensorFlow found
-print("Classes:", train_dataset.class_names)
+# TensorFlow automatically reads the class names from the folder names
+class_names = train_dataset.class_names
+print("Classes:", class_names)
+
+# Automatically determine how many classes we have
+number_of_classes = len(class_names)
+print("Number of classes:", number_of_classes)
 
 
 # Load a pretrained MobileNetV2 model
@@ -58,10 +69,7 @@ model = keras.Sequential([
 
     # Reduce the feature maps into a smaller representation
     layers.GlobalAveragePooling2D(),
-
-    # Final classifier for our 3 classes:
-    # metal, paper, plastic
-    layers.Dense(3, activation="softmax")
+    layers.Dense(number_of_classes, activation="softmax")
 ])
 
 
@@ -85,4 +93,4 @@ history = model.fit(
 
 
 # Save the trained model so we can use it later
-model.save("waste_classifier.keras")
+model.save(ML_DIR / "waste_classifier_mwcd.keras")

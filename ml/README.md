@@ -1,24 +1,43 @@
 # ML Training Pipeline
 
-This folder contains the initial machine learning training pipeline for the Smart Recycling Detector.
+This folder contains the machine learning training pipeline for the Smart Recycling Detector.
 
 ## Current Classes
 
-The current model classifies waste into three categories:
+The current model classifies waste into six categories:
 
+- Cardboard
+- Glass
 - Metal
+- Organic
 - Paper
 - Plastic
 
 ## Dataset
 
-The initial pipeline uses images from the TrashNet dataset.
+The current training pipeline uses selected classes from the Merged Waste Classification Dataset (MWCD).
 
-The dataset is organized as:
+The original MWCD dataset contains nine classes. For the current project, only six classes were selected:
+
+- Cardboard
+- Glass
+- Metal
+- Organic
+- Paper
+- Plastic
+
+Battery, textile, and trash were excluded from the current model. Battery requires more specialized disposal guidance, textile is outside the current project scope, and trash is a broad category that does not represent a specific recyclable material.
+
+The selected dataset contains 20,695 images.
+
+The dataset is organized locally as:
 
 ```text
-dataset/
+dataset_mwcd/
+├── cardboard/
+├── glass/
 ├── metal/
+├── organic/
 ├── paper/
 └── plastic/
 ```
@@ -28,13 +47,16 @@ The dataset is split into:
 - 80% training data
 - 20% validation data
 
+A fixed random seed is used so that the same train/validation split can be reproduced.
 The dataset itself is not included in the Git repository.
 
 ## Model
 
-The initial model uses MobileNetV2 with transfer learning.
+The model uses MobileNetV2 with transfer learning.
 
-MobileNetV2 is pretrained on ImageNet. The pretrained MobileNetV2 layers are frozen and used as a feature extractor. A new classification layer is added and trained to classify the three waste categories.
+MobileNetV2 is pretrained on ImageNet. The pretrained MobileNetV2 layers are frozen and used as a feature extractor. The original MobileNetV2 classification layer is removed and a new classification layer is used for the selected waste classes.
+
+The number of output classes is automatically determined from the dataset folders.
 
 ## Preprocessing
 
@@ -42,6 +64,7 @@ Before being passed to the model:
 
 - Images are resized to 224 × 224 pixels.
 - Pixel values are rescaled to the range expected by MobileNetV2.
+- Images are processed in batches of 32.
 
 ## Training
 
@@ -51,6 +74,7 @@ The current training configuration is:
 - Loss function: Sparse Categorical Crossentropy
 - Batch size: 32
 - Epochs: 5
+- Validation split: 20%
 
 Run the training pipeline with:
 
@@ -61,41 +85,54 @@ python train_model.py
 The pipeline performs the following steps:
 
 ```text
-Dataset
-↓
-Preprocessing
-↓
-Training
-↓
+MWCD Dataset
+     ↓
+Train / Validation Split
+     ↓
+Image Preprocessing
+     ↓
+MobileNetV2 Feature Extraction
+     ↓
+Waste Classification
+     ↓
 Validation
-↓
+     ↓
 Saved Model
 ```
 
 After training, the model is saved as:
 
 ```text
-waste_classifier.keras
+waste_classifier_mwcd.keras
 ```
 
-The trained model file is not included in the repository.
+The trained model file is not included in the Git repository.
 
 ## Testing
 
-`test_model.py` loads the saved model and can be used to make predictions on new images.
+`test_model.py` loads the trained MWCD model and can be used to make predictions on the independent test images.
 
 For each image, the script displays:
 
+- Actual class
 - Predicted class
 - Confidence
 - Probability for each class
 
-## Initial Result
+The test images are stored locally in the `test_dataset` folder and are not included in the Git repository.
 
-The first MobileNetV2 training run produced:
+## Evaluation
 
-- Training accuracy: 96.69%
-- Validation accuracy: 93.27%
-- Validation loss: 0.1996
+Model evaluation is handled separately from the training pipeline.
 
-This model serves as the initial baseline. Further dataset evaluation, model comparison, and model tuning will be handled in later project tasks.
+The baseline model will be evaluated using overall validation performance, per-class performance, and a confusion matrix. A separate real-world test dataset will also be used later to evaluate how well the model generalizes to images outside the training dataset.
+
+## Previous Prototype
+
+An earlier version of the training pipeline used three classes from the TrashNet dataset:
+
+- Metal
+- Paper
+- Plastic
+
+This smaller dataset was used to verify that the initial MobileNetV2 training and prediction pipeline worked before moving to the larger MWCD dataset.

@@ -1,39 +1,53 @@
-import os
 import numpy as np
 from tensorflow import keras
+from pathlib import Path
 
 
-# Load the trained model
-model = keras.models.load_model("waste_classifier.keras")
+# Folder where this Python file is located
+ML_DIR = Path(__file__).parent
+
+# Load the trained MWCD model
+model = keras.models.load_model(
+    ML_DIR / "waste_classifier_mwcd.keras"
+)
 
 # These must match the class order used during training
-class_names = ["metal", "paper", "plastic"]
+class_names = [
+    "cardboard",
+    "glass",
+    "metal",
+    "organic",
+    "paper",
+    "plastic"
+]
 
-# Folder containing all test images
-TEST_DATASET_PATH = "test_dataset"
+# Folder containing test images
+TEST_DATASET_PATH = ML_DIR / "test_dataset"
 
 
-# Go through each class folder
-for actual_class in class_names:
+# Go through each folder that currently exists in test_dataset
+for class_folder in TEST_DATASET_PATH.iterdir():
 
-    class_folder = os.path.join(
-        TEST_DATASET_PATH,
-        actual_class
-    )
+    # Skip anything that is not a folder
+    if not class_folder.is_dir():
+        continue
 
-    # Go through every file in that folder
-    for filename in os.listdir(class_folder):
+    actual_class = class_folder.name
+
+    # Skip folders that are not one of our model classes
+    if actual_class not in class_names:
+        continue
+
+    # Go through every file in the class folder
+    for image_path in class_folder.iterdir():
 
         # Only process image files
-        if not filename.lower().endswith(
-            (".jpg", ".jpeg", ".png")
-        ):
+        if image_path.suffix.lower() not in [
+            ".jpg",
+            ".jpeg",
+            ".png"
+        ]:
             continue
-
-        image_path = os.path.join(
-            class_folder,
-            filename
-        )
 
         # Load and resize the image
         img = keras.utils.load_img(
@@ -56,7 +70,7 @@ for actual_class in class_names:
             verbose=0
         )
 
-        # Find highest probability
+        # Find the class with the highest probability
         predicted_index = np.argmax(
             predictions[0]
         )
@@ -71,7 +85,7 @@ for actual_class in class_names:
         )
 
         print("\n----------------------------")
-        print("Image:", filename)
+        print("Image:", image_path.name)
         print("Actual class:", actual_class)
 
         print("All probabilities:")
