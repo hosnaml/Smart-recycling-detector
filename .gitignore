@@ -12,4 +12,5 @@ ml/trashnet-dataset/
 
 ml/*.keras
 ml/*.h5
-ml/*.tflite
+ml/*.tfliteml/dataset_mwcd/
+ml/dataset_mwcd/
