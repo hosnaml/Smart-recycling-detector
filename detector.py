@@ -17,7 +17,7 @@ except ImportError:
 
 # Setup Model Path
 ML_DIR = Path(__file__).parent / "ml"
-MODEL_PATH = ML_DIR / "waste_classifier_mwcd_finetuned.keras"
+MODEL_PATH = ML_DIR / "waste_classifier_mwcd_finetuned.tflite"
 model = None
 
 # Load model if dependencies and model file exist
