@@ -223,19 +223,29 @@ Example output:
 Open the application on any device connected to the same network:
 
 http://192.168.1.100:5000
+
 Replace the IP address with your Raspberry Pi's actual address.
 
 ## Useful Troubleshooting Commands
 
 Check Available Storage
+
 df -h
+
 Check Connected USB Devices
+
 lsusb
+
 Check Available Camera Devices
+
 ls /dev/video*
+
 Verify Python Environment
+
 which python
+
 Verify Installed Packages
+
 pip list
 
 ## Prediction Pipeline
