@@ -174,7 +174,7 @@ Upgrade pip:
 
 pip install --upgrade pip
 
-## 📦 Install Dependencies
+## Install Dependencies
 Install all required packages:
 
 pip install -r requirements.txt
@@ -276,6 +276,9 @@ Image Preprocessing
 ## Before inference:
 
 Images are resized to 224 × 224
+
 MobileNetV2 preprocessing is applied
+
 Prediction confidence is calculated
+
 Results are returned to the browser
