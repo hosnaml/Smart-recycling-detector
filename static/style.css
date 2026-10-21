@@ -59,3 +59,30 @@ body {
 .tracking-wide {
     letter-spacing: 0.1em;
 }
+
+/* Q&A Option Styling */
+.qa-option-card {
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    padding: 15px;
+    transition: all 0.2s ease;
+    background-color: #fff;
+}
+
+.qa-option-card.active {
+    border-color: #198754;
+    background-color: #f8fff9;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.15);
+}
+
+.joystick-hint {
+    display: inline-block;
+    background: #e9ecef;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 8px;
+}
