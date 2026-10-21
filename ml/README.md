@@ -292,3 +292,39 @@ Results are returned to the browser
 Baseline model performance, per-class accuracy, and the confusion matrix are documented in:
 
 [BASELINE_RESULTS.md](BASELINE_RESULTS.md)
+
+
+## Fine-Tuned MobileNetV2 (Issue #13)
+
+The baseline MobileNetV2 model was improved using a two-stage training process:
+
+1. **Initial training:** Train the classification head for 10 epochs while keeping the pretrained MobileNetV2 layers frozen.
+2. **Fine-tuning:** Unfreeze the last 30 MobileNetV2 layers and continue training for 5 epochs using a learning rate of 0.00001.
+
+### Results
+
+| Model | Validation Accuracy |
+|---|---|
+| Original baseline (5 epochs) | 88.98% |
+| Extended training (10 epochs) | 89.80% |
+| Fine-tuned MobileNetV2 | **93.16%** |
+
+Fine-tuning improved validation accuracy by 4.18 percentage points compared with the original baseline.
+
+### Reproduce Training
+
+Run:
+
+```bash
+python ml/train_final_mobilenetv2.py
+```
+
+The script trains the classification head, saves and reloads the intermediate model, and performs fine-tuning.
+
+The final model is saved as `ml/waste_classifier_mobilenetv2_final.keras`.
+
+### Limitations
+
+Validation results are based on MWCD. Independent real-world testing is still needed to assess performance under different lighting, backgrounds, and camera conditions.
+
+Trained model files are not included in Git.
