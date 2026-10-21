@@ -3,6 +3,7 @@ import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
 from pathlib import Path
+from sklearn.metrics import accuracy_score, classification_report
 
 
 # Folder where this Python file is located
@@ -64,6 +65,26 @@ for images, labels in validation_dataset:
         predictions
     )
 
+# Calculate overall evaluation metrics
+accuracy = accuracy_score(
+    actual_labels,
+    predicted_labels
+)
+
+print("\nOverall Evaluation Metrics:")
+print(f"Accuracy: {accuracy * 100:.2f}%")
+
+print("\nPrecision, Recall, and F1-Score:")
+print(
+    classification_report(
+        actual_labels,
+        predicted_labels,
+        labels=list(range(len(class_names))),
+        target_names=class_names,
+        zero_division=0,
+        digits=4
+    )
+)
 
 # Create confusion matrix
 matrix = tf.math.confusion_matrix(
