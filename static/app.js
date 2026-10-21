@@ -7,8 +7,69 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultTitle = document.getElementById('result-title');
     const resultDesc = document.getElementById('result-desc');
     const resultIcon = document.getElementById('result-icon');
+    
+    // Q&A Elements
+    const qaSection = document.getElementById('qa-section');
+    const qaQuestion = document.getElementById('qa-question');
+    const qaOptionsContainer = document.getElementById('qa-options');
+    const finalInstruction = document.getElementById('final-instruction');
 
     let isScanning = false;
+    let inQAState = false;
+    let currentOptionsMap = {}; // Maps 'ArrowLeft' -> action/instruction
+
+    // Interactive Q&A Graph/Dictionary (Swedish Context)
+    const QA_DATABASE = {
+        'Plastic': {
+            question: "What type of plastic item is this?",
+            options: [
+                { direction: 'ArrowLeft', label: 'Bottle (Pant)', text: 'Take this to a supermarket reverse vending machine (Pant) to get your deposit back!' },
+                { direction: 'ArrowRight', label: 'Food Tray', text: 'Empty and rinse out any food residue, then place in the plastic recycling bin.' },
+                { direction: 'ArrowUp', label: 'Soft Plastic', text: 'Ensure it is empty and place it in the plastic recycling bin.' }
+            ]
+        },
+        'Metal': {
+            question: "What kind of metal item is it?",
+            options: [
+                { direction: 'ArrowLeft', label: 'Can (Pant)', text: 'Do not crush it! Take it to a supermarket Pant station.' },
+                { direction: 'ArrowRight', label: 'Food Can', text: 'Rinse it out, fold the sharp lid inside, and put in the metal bin.' },
+                { direction: 'ArrowUp', label: 'Alu Foil', text: 'Rinse off any food, crumple it into a ball, and recycle as metal.' }
+            ]
+        },
+        'Glass': {
+            question: "What type of glass is it?",
+            options: [
+                { direction: 'ArrowLeft', label: 'Clear', text: 'Remove the cap/lid and place in the Clear Glass (Ofärgat glas) bin.' },
+                { direction: 'ArrowRight', label: 'Colored', text: 'Remove the cap/lid and place in the Colored Glass (Färgat glas) bin.' },
+                { direction: 'ArrowUp', label: 'Drinking/Mirror', text: 'Wait! Drinking glasses and mirrors cannot be recycled as packaging. Put in general waste.' }
+            ]
+        },
+        'Paper': {
+            question: "Is the paper clean and dry?",
+            options: [
+                { direction: 'ArrowLeft', label: 'Yes', text: 'Great! Place it in the standard paper recycling bin.' },
+                { direction: 'ArrowRight', label: 'No (Greasy)', text: 'Place soiled paper (like napkins) in the compost/organic bin or general waste.' }
+            ]
+        },
+        'Cardboard': {
+            question: "Is this a greasy pizza box or clean cardboard?",
+            options: [
+                { direction: 'ArrowLeft', label: 'Pizza Box', text: 'Tear off the clean lid for cardboard recycling. The greasy bottom goes in general waste.' },
+                { direction: 'ArrowRight', label: 'Clean Box', text: 'Flatten the box completely to save space, then place in cardboard recycling.' }
+            ]
+        }
+    };
+
+    // Helper to get symbol for direction
+    const getDirectionSymbol = (dir) => {
+        switch(dir) {
+            case 'ArrowLeft': return '⬅️ Left';
+            case 'ArrowRight': return '➡️ Right';
+            case 'ArrowUp': return '⬆️ Up';
+            case 'ArrowDown': return '⬇️ Down';
+            default: return dir;
+        }
+    };
 
     // Icons map for different categories
     const categoryIcons = {
@@ -83,8 +144,42 @@ document.addEventListener('DOMContentLoaded', () => {
             // UI: Display Result
             resultIcon.textContent = categoryIcons[result.label] || '📦';
             resultTitle.textContent = result.label;
-            resultTitle.className = `fw-bold mb-3 display-6 text-${result.color}`;
-            resultDesc.textContent = result.instructions;
+            resultTitle.className = `fw-bold mb-2 display-6 text-${result.color}`;
+            
+            // Reset visibility
+            resultDesc.style.display = 'none';
+            qaSection.style.display = 'none';
+            finalInstruction.style.display = 'none';
+            qaOptionsContainer.innerHTML = '';
+            currentOptionsMap = {};
+
+            // Check if we have interactive Q&A for this material
+            if (QA_DATABASE[result.label]) {
+                inQAState = true;
+                const qaData = QA_DATABASE[result.label];
+                qaQuestion.textContent = qaData.question;
+                
+                qaData.options.forEach(opt => {
+                    currentOptionsMap[opt.direction] = opt.text;
+                    
+                    const col = document.createElement('div');
+                    col.className = 'col-sm-6 col-md-4';
+                    col.innerHTML = `
+                        <div class="qa-option-card text-center" id="opt-${opt.direction}">
+                            <span class="joystick-hint">${getDirectionSymbol(opt.direction)}</span>
+                            <h6 class="mb-0 fw-bold mt-2">${opt.label}</h6>
+                        </div>
+                    `;
+                    qaOptionsContainer.appendChild(col);
+                });
+                
+                qaSection.style.display = 'block';
+            } else {
+                // Standard fallback (e.g. Organic, Trash)
+                inQAState = false;
+                resultDesc.textContent = result.instructions;
+                resultDesc.style.display = 'block';
+            }
             
             // Trigger reflow to restart CSS animation
             resultCard.classList.remove('result-pop');
@@ -107,11 +202,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Manual Button Click
     captureBtn.addEventListener('click', captureAndDetect);
 
-    // Keyboard Fallback (Enter key)
+    // Keyboard Fallback (Enter key to scan, Arrows to answer Q&A)
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
+            // If in Q&A state, reset and scan again. Otherwise, just scan.
+            if (inQAState) {
+                inQAState = false;
+                resultCard.style.display = 'none';
+            }
             captureAndDetect();
+        } else if (inQAState && currentOptionsMap[e.key]) {
+            e.preventDefault();
+            
+            // Highlight selected option visually
+            document.querySelectorAll('.qa-option-card').forEach(el => el.classList.remove('active'));
+            const selectedCard = document.getElementById(`opt-${e.key}`);
+            if (selectedCard) selectedCard.classList.add('active');
+            
+            // Display final instruction
+            finalInstruction.textContent = currentOptionsMap[e.key];
+            finalInstruction.style.display = 'block';
+            
+            // End Q&A state so arrows don't trigger again until next scan
+            inQAState = false;
         }
     });
 

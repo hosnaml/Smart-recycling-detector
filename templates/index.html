@@ -36,7 +36,7 @@
                 </div>
 
                 <!-- Manual Trigger Button -->
-                <div class="text-center mb-5">
+                <div class="text-center mb-5" id="action-container">
                     <button id="capture-btn" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm fw-bold">
                         📷 Scan Now
                     </button>
@@ -47,8 +47,24 @@
                     <div class="mb-3">
                         <span id="result-icon" class="display-1">📦</span>
                     </div>
-                    <h2 id="result-title" class="fw-bold mb-3 display-6">Category</h2>
-                    <p id="result-desc" class="lead text-muted mb-0">Instructions go here.</p>
+                    <h2 id="result-title" class="fw-bold mb-2 display-6">Category</h2>
+                    
+                    <!-- Base Instruction from Backend -->
+                    <p id="result-desc" class="lead text-muted mb-4" style="display: none;">Instructions go here.</p>
+
+                    <!-- Interactive Q&A Section -->
+                    <div id="qa-section" class="mt-4 pt-4 border-top" style="display: none;">
+                        <h4 id="qa-question" class="fw-bold mb-4">Question goes here?</h4>
+                        
+                        <div class="row g-3 justify-content-center" id="qa-options">
+                            <!-- Options will be injected here via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Final Instruction after Q&A -->
+                    <div id="final-instruction" class="mt-4 pt-3 text-success fw-bold fs-5" style="display: none;">
+                        Final instruction here.
+                    </div>
                 </div>
             </div>
         </div>
