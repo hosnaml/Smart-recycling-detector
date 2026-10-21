@@ -8,7 +8,7 @@ ML_DIR = Path(__file__).parent
 
 # Load the trained MWCD model
 model = keras.models.load_model(
-    ML_DIR / "waste_classifier_mwcd.keras"
+    ML_DIR / "waste_classifier_mwcd_10epochs.keras"
 )
 
 # These must match the class order used during training
