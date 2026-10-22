@@ -102,16 +102,79 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(err => console.error("Error fetching model status:", err));
 
-    // 1. Initialize Camera
-    // Request rear-facing camera if available
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        .then(stream => {
-            video.srcObject = stream;
-        })
-        .catch(err => {
-            console.error("Camera access denied or unavailable", err);
-            alert("Unable to access camera. Please allow camera permissions in your browser.");
-        });
+    // iPhone Continuity Camera integration
+    let currentStream = null;
+
+    async function initializeCamera() {
+        try {
+            // Request permission so camera names are available.
+            const permissionStream =
+                await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: false
+                });
+
+            // Stop temporary camera before selecting the preferred one.
+            permissionStream.getTracks().forEach(track => track.stop());
+
+            const devices =
+                await navigator.mediaDevices.enumerateDevices();
+
+            const cameras = devices.filter(
+                device => device.kind === 'videoinput'
+            );
+
+            console.log(
+                'Available cameras:',
+                cameras.map(camera => camera.label)
+            );
+
+            // Select the normal iPhone camera, not Desk View.
+            const iphoneCamera = cameras.find(camera => {
+                const name = camera.label.toLowerCase();
+
+                return name.includes('iphone') &&
+                       name.includes('camera') &&
+                       !name.includes('desk view');
+            });
+
+            const constraints = iphoneCamera
+                ? {
+                    video: {
+                        deviceId: {
+                            exact: iphoneCamera.deviceId
+                        }
+                    },
+                    audio: false
+                }
+                : {
+                    video: true,
+                    audio: false
+                };
+
+            currentStream =
+                await navigator.mediaDevices.getUserMedia(constraints);
+
+            video.srcObject = currentStream;
+
+            await video.play();
+
+            if (iphoneCamera) {
+                console.log('Using iPhone Camera');
+            } else {
+                console.log('Using default webcam');
+            }
+
+        } catch (error) {
+            console.error('Camera initialization error:', error);
+
+            alert(
+                'Unable to access the camera. Check camera permissions and Continuity Camera.'
+            );
+        }
+    }
+
+    initializeCamera();
 
     // 2. Capture and Send to Backend
     const captureAndDetect = async () => {
@@ -123,10 +186,26 @@ document.addEventListener('DOMContentLoaded', () => {
         resultCard.style.display = 'none';
 
         // Draw current video frame to hidden canvas
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+
+        const cropSize = Math.floor(
+            Math.min(videoWidth, videoHeight) * 0.55
+        );
+
+        const cropX = Math.floor((videoWidth - cropSize) / 2);
+        const cropY = Math.floor((videoHeight - cropSize) / 2);
+
+        canvas.width = 224;
+        canvas.height = 224;
+
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        ctx.drawImage(
+            video,
+            cropX, cropY, cropSize, cropSize,
+            0, 0, 224, 224
+        );
         
         // Convert to base64 JPEG
         const imageData = canvas.toDataURL('image/jpeg', 0.8);
@@ -232,9 +311,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Server-Sent Events (Hardware Joystick trigger via backend)
     const evtSource = new EventSource("/events");
     evtSource.onmessage = function(event) {
-        if (event.data === "CAPTURE") {
-            console.log("Hardware joystick trigger received from backend!");
-            captureAndDetect();
+        const joystickKeys = {
+            "LEFT": "ArrowLeft",
+            "RIGHT": "ArrowRight",
+            "UP": "ArrowUp",
+            "CAPTURE": "Enter"
+        };
+
+        const key = joystickKeys[event.data];
+
+        if (key) {
+            console.log("Hardware joystick event:", event.data);
+            document.dispatchEvent(new KeyboardEvent("keydown", {
+                key: key,
+                bubbles: true
+            }));
         }
     };
     
