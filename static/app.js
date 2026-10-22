@@ -281,33 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Manual Button Click
     captureBtn.addEventListener('click', captureAndDetect);
 
-    // Keyboard Fallback (Enter key to scan, Arrows to answer Q&A)
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            // If in Q&A state, reset and scan again. Otherwise, just scan.
-            if (inQAState) {
-                inQAState = false;
-                resultCard.style.display = 'none';
-            }
-            captureAndDetect();
-        } else if (inQAState && currentOptionsMap[e.key]) {
-            e.preventDefault();
-            
-            // Highlight selected option visually
-            document.querySelectorAll('.qa-option-card').forEach(el => el.classList.remove('active'));
-            const selectedCard = document.getElementById(`opt-${e.key}`);
-            if (selectedCard) selectedCard.classList.add('active');
-            
-            // Display final instruction
-            finalInstruction.textContent = currentOptionsMap[e.key];
-            finalInstruction.style.display = 'block';
-            
-            // End Q&A state so arrows don't trigger again until next scan
-            inQAState = false;
-        }
-    });
-
     // Server-Sent Events (Hardware Joystick trigger via backend)
     const evtSource = new EventSource("/events");
     evtSource.onmessage = function(event) {
