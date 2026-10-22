@@ -1,188 +1,220 @@
+
+import csv
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
 from pathlib import Path
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+)
 
-
-# Folder where this Python file is located
-ML_DIR = Path(__file__).parent
 
 # Paths
-DATASET_PATH = ML_DIR / "dataset_mwcd"
-MODEL_PATH = ML_DIR / "waste_classifier_mwcd.keras"
+ML_DIR = Path(__file__).parent
+TEST_DATASET_PATH = ML_DIR / "test_dataset"
+MODEL_PATH = ML_DIR / "waste_classifier_mwcd_finetuned.keras"
+RESULTS_PATH = ML_DIR / "results"
 
 IMAGE_SIZE = (224, 224)
 BATCH_SIZE = 32
-SEED = 123
 
+# Class order must match the model's training classes
+class_names = [
+    "cardboard",
+    "glass",
+    "metal",
+    "organic",
+    "paper",
+    "plastic",
+]
 
-# Load validation data
-validation_dataset = keras.utils.image_dataset_from_directory(
-    DATASET_PATH,
-    validation_split=0.2,
-    subset="validation",
-    seed=SEED,
+# Load the phone-photo dataset.
+# Folder names provide the actual labels for each image.
+test_dataset = keras.utils.image_dataset_from_directory(
+    TEST_DATASET_PATH,
+    class_names=class_names,
     image_size=IMAGE_SIZE,
-    batch_size=BATCH_SIZE
+    batch_size=BATCH_SIZE,
+    shuffle=False,
 )
 
-class_names = validation_dataset.class_names
+# Load the trained model
+model = keras.models.load_model(MODEL_PATH)
 
+print("Model loaded successfully.")
 print("Classes:", class_names)
 
-
-# Load trained model
-model = keras.models.load_model(
-    MODEL_PATH
-)
-
-
-# Lists to store correct labels and model predictions
+# Collect actual labels and predictions
 actual_labels = []
 predicted_labels = []
+confidence_scores = []
 
+for images, labels in test_dataset:
+    probabilities = model.predict(images, verbose=0)
+    predictions = np.argmax(probabilities, axis=1)
+    confidences = np.max(probabilities, axis=1)
 
-# Go through validation images
-for images, labels in validation_dataset:
+    confidence_scores.extend(confidences.tolist())
+    actual_labels.extend(labels.numpy().tolist())
+    predicted_labels.extend(predictions.tolist())
 
-    predictions = model.predict(
-        images,
-        verbose=0
+actual_labels = np.array(actual_labels)
+predicted_labels = np.array(predicted_labels)
+confidence_scores = np.array(confidence_scores)
+
+# Calculate overall metrics
+accuracy = accuracy_score(actual_labels, predicted_labels)
+
+print("\nEvaluation Results")
+print("==================")
+print(f"Number of images: {len(actual_labels)}")
+print(f"Overall accuracy: {accuracy * 100:.2f}%")
+
+print("\nPer-Class Precision, Recall, and F1-Score")
+print("=========================================")
+print(
+    classification_report(
+        actual_labels,
+        predicted_labels,
+        labels=list(range(len(class_names))),
+        target_names=class_names,
+        zero_division=0,
+        digits=4,
     )
+)
 
-    predictions = np.argmax(
-        predictions,
-        axis=1
-    )
+# Create results folder
+RESULTS_PATH.mkdir(parents=True, exist_ok=True)
 
-    actual_labels.extend(
-        labels.numpy()
-    )
-
-    predicted_labels.extend(
-        predictions
-    )
-
-
-# Create confusion matrix
-matrix = tf.math.confusion_matrix(
+# Confusion matrix
+matrix = confusion_matrix(
     actual_labels,
     predicted_labels,
-    num_classes=len(class_names)
-).numpy()
+    labels=list(range(len(class_names))),
+)
 
-
-print("\nConfusion Matrix:")
+print("\nConfusion Matrix")
 print(matrix)
 
-
-# Calculate accuracy for each class
-print("\nPer-Class Accuracy:")
-
-accuracies = []
-
-for i in range(len(class_names)):
-
-    correct = matrix[i][i]
-    total = matrix[i].sum()
-
-    accuracy = (
-        correct / total
-    ) * 100
-
-    accuracies.append(accuracy)
-
-    print(
-        class_names[i],
-        f"{accuracy:.2f}%"
-    )
-
-
-# Create folder for result images
-RESULTS_PATH = ML_DIR / "results"
-RESULTS_PATH.mkdir(exist_ok=True)
-
-
-# Create and save per-class accuracy chart
-plt.figure(figsize=(8, 5))
-
-plt.bar(
-    class_names,
-    accuracies
+display = ConfusionMatrixDisplay(
+    confusion_matrix=matrix,
+    display_labels=class_names,
 )
+display.plot(cmap="Blues", xticks_rotation=45)
+plt.title("Confusion Matrix - Phone Photo Test Set")
+plt.tight_layout()
+plt.savefig(RESULTS_PATH / "confusion_matrix.png")
+plt.close()
 
+# Per-class accuracy: correct predictions / actual images in each class
+class_accuracies = []
+
+for i, class_name in enumerate(class_names):
+    total = matrix[i].sum()
+    correct = matrix[i, i]
+    class_accuracy = correct / total * 100 if total else 0.0
+    class_accuracies.append(class_accuracy)
+    print(f"{class_name}: {class_accuracy:.2f}% ({correct}/{total})")
+
+plt.figure(figsize=(8, 5))
+plt.bar(class_names, class_accuracies)
 plt.xlabel("Class")
 plt.ylabel("Accuracy (%)")
-plt.title("Per-Class Accuracy")
-
+plt.title("Per-Class Accuracy - Phone Photo Test Set")
 plt.ylim(0, 100)
-
 plt.tight_layout()
-
-plt.savefig(
-    RESULTS_PATH / "per_class_accuracy.png"
-)
-
+plt.savefig(RESULTS_PATH / "per_class_accuracy.png")
 plt.close()
 
+print(f"\nResult images saved in: {RESULTS_PATH}")
 
-# Create and save confusion matrix image
-plt.figure(figsize=(7, 6))
+# Confidence Threshold Investigation
+print("\nConfidence Threshold Analysis")
+print("=============================")
 
-plt.imshow(
-    matrix,
-    cmap="Blues"
-)
+thresholds = [0.50, 0.60, 0.70, 0.80, 0.90]
 
-plt.colorbar()
+RESULTS_PATH.mkdir(parents=True, exist_ok=True)
 
-plt.title("Confusion Matrix")
-plt.xlabel("Predicted Class")
-plt.ylabel("Actual Class")
+image_results_path = RESULTS_PATH / "confidence_predictions.csv"
+threshold_results_path = RESULTS_PATH / "confidence_threshold_results.csv"
 
-plt.xticks(
-    range(len(class_names)),
-    class_names,
-    rotation=45
-)
+# Save each image's prediction and confidence
+with open(image_results_path, "w", newline="") as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow([
+        "actual_class",
+        "predicted_class",
+        "confidence_percent",
+        "correct",
+    ])
 
-plt.yticks(
-    range(len(class_names)),
-    class_names
-)
+    for actual, predicted, confidence in zip(
+        actual_labels, predicted_labels, confidence_scores
+    ):
+        writer.writerow([
+            class_names[int(actual)],
+            class_names[int(predicted)],
+            round(float(confidence) * 100, 2),
+            int(actual == predicted),
+        ])
 
+# Compare the results at each confidence threshold
+with open(threshold_results_path, "w", newline="") as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow([
+        "threshold",
+        "total_images",
+        "accepted_images",
+        "coverage_percent",
+        "accepted_accuracy_percent",
+        "incorrect_accepted",
+        "uncertain_images",
+    ])
 
-# Change number color depending on background
-threshold = matrix.max() / 2
+    for threshold in thresholds:
+        accepted = [
+            i for i, confidence in enumerate(confidence_scores)
+            if confidence >= threshold
+        ]
 
-for i in range(len(class_names)):
-
-    for j in range(len(class_names)):
-
-        if matrix[i][j] > threshold:
-            text_color = "white"
-        else:
-            text_color = "black"
-
-        plt.text(
-            j,
-            i,
-            matrix[i][j],
-            ha="center",
-            va="center",
-            color=text_color
+        accepted_count = len(accepted)
+        incorrect_count = sum(
+            actual_labels[i] != predicted_labels[i] for i in accepted
         )
 
+        coverage = accepted_count / len(confidence_scores) * 100
 
-plt.tight_layout()
+        if accepted_count:
+            accepted_accuracy = (
+                accepted_count - incorrect_count
+            ) / accepted_count * 100
+        else:
+            accepted_accuracy = 0.0
 
-plt.savefig(
-    RESULTS_PATH / "confusion_matrix.png"
-)
+        uncertain_count = len(confidence_scores) - accepted_count
 
-plt.close()
+        writer.writerow([
+            threshold,
+            len(confidence_scores),
+            accepted_count,
+            round(coverage, 2),
+            round(accepted_accuracy, 2),
+            incorrect_count,
+            uncertain_count,
+        ])
 
+        print(
+            f"Threshold {threshold:.0%}: "
+            f"{accepted_count}/{len(confidence_scores)} accepted, "
+            f"coverage={coverage:.2f}%, "
+            f"accepted accuracy={accepted_accuracy:.2f}%, "
+            f"incorrect accepted={incorrect_count}"
+        )
 
-print("\nResult images saved in:")
-print(RESULTS_PATH)
+print(f"\nPer-image results saved to: {image_results_path}")
+print(f"Threshold summary saved to: {threshold_results_path}")
