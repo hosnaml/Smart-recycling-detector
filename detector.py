@@ -19,6 +19,7 @@ except ImportError:
 ML_DIR = Path(__file__).parent / "ml"
 MODEL_PATH = ML_DIR / "waste_classifier_mwcd_finetuned.keras"
 model = None
+CONFIDENCE_THRESHOLD = 0.80
 
 # Load model if dependencies and model file exist
 if ML_AVAILABLE:
@@ -93,12 +94,37 @@ def detect_recycling(image_data_b64):
             # Convert to numpy array and add batch dimension
             img_array = keras.utils.img_to_array(img)
             img_array = np.expand_dims(img_array, axis=0)
-            
+
             # Make prediction
-            predictions = model.predict(img_array, verbose=0)
-            predicted_index = np.argmax(predictions[0])
+            predictions = model.predict(img_array, verbose=0)[0]
+            predicted_index = np.argmax(predictions)
             predicted_class = CLASS_NAMES[predicted_index]
-            
+            confidence = float(predictions[predicted_index])
+
+            print(
+                f"ML Detection: {predicted_class} "
+                f"(Confidence: {confidence * 100:.2f}%)"
+            )
+
+            # Flag predictions below the confidence threshold
+            if confidence < CONFIDENCE_THRESHOLD:
+                return {
+                    "label": "Uncertain",
+                    "color": "warning",
+                    "instructions": (
+                        "The model is not confident enough to classify this item. "
+                        "Please try another photo with the item clearly visible."
+                    ),
+                    "confidence": round(confidence * 100, 2),
+                    "uncertain": True
+                }
+
+            # Return the predicted category when confidence is high enough
+            result = CATEGORIES[predicted_class].copy()
+            result["confidence"] = round(confidence * 100, 2)
+            result["uncertain"] = False
+            return result
+
             print(f"ML Detection: {predicted_class} (Confidence: {predictions[0][predicted_index]*100:.2f}%)")
             
             return CATEGORIES[predicted_class]
