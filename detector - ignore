@@ -1,0 +1,57 @@
+import base64
+import io
+import random
+import time
+from pathlib import Path
+
+try:
+    import tensorflow as tf
+    import numpy as np
+    from PIL import Image
+
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+    print("TensorFlow Lite dependencies not installed.")
+
+ML_DIR = Path(__file__).parent / "ml"
+
+MODEL_PATH = ML_DIR / "waste_classifier_mwcd_finetuned.tflite"
+
+interpreter = None
+
+if ML_AVAILABLE:
+    try:
+        interpreter = tf.lite.Interpreter(
+            model_path=str(MODEL_PATH)
+        )
+
+        interpreter.allocate_tensors()
+
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
+
+        print("TFLite model loaded successfully!")
+
+    except Exception as e:
+        print("Error loading TFLite model:", e)
+        interpreter = None
+
+
+CLASS_NAMES = [
+    "cardboard",
+    "glass",
+    "metal",
+    "organic",
+    "paper",
+    "plastic"
+]
+
+CATEGORIES = {
+    "cardboard": {
+        "label": "Cardboard",
+        "color": "info",
+        "instructions": "Flatten and place in the cardboard recycling bin."
+    },
+    "glass": {
+        "label": "Glass

@@ -142,8 +142,189 @@ An earlier version of the training pipeline used three classes from the TrashNet
 
 This smaller dataset was used to verify that the initial MobileNetV2 training and prediction pipeline worked before moving to the larger MWCD dataset.
 
+# Raspberry Pi Deployment
+
+The Smart Recycling Detector can be deployed on a Raspberry Pi to perform real-time waste classification through a web-based interface.
+
+The Raspberry Pi hosts:
+
+MobileNetV2 waste classification model
+Flask backend API
+Web user interface
+Prediction services
+The Raspberry Pi performs all model inference while users interact with the system from any device connected to the same network.
+
+## Requirements
+
+Raspberry Pi OS
+Python 3.x
+Git
+Camera-enabled device (preferably a webcam)
+Trained model (waste_classifier_mwcd.keras)
+
+## Clone the Repository
+
+git clone https://github.com/hosnaml/Smart-recycling-detector.git
+cd Smart-recycling-detector
+
+## Create a Virtual Environment
+
+Create a Python virtual environment:
+
+python3 -m venv venv
+Activate the environment:
+
+source venv/bin/activate
+Upgrade pip:
+
+pip install --upgrade pip
+
+## Install Dependencies
+Install all required packages:
+
+pip install -r requirements.txt
+If additional packages are needed:
+
+pip install flask tensorflow opencv-python numpy pillow
+
+## Model Deployment
+
+Place the trained model in the project root:
+
+waste_classifier_mwcd.keras
+Verify that the model exists:
+
+ls -lh waste_classifier_mwcd.keras
+The model is loaded automatically when the Flask application starts.
+
+## Camera Access
+
+The application uses the browser's camera through the MediaDevices API.
+
+navigator.mediaDevices.getUserMedia({
+    video: true
+});
+
+## Start the Application
+
+Run the Flask server:
+
+python app.py
+
+Expected output:
+
+* Running on http://0.0.0.0:5000
+
+## Find Raspberry Pi IP Address
+Determine the Raspberry Pi IP address:
+
+hostname -I
+Example output:
+
+192.168.1.100
+
+## Access the Web Interface
+
+Open the application on any device connected to the same network:
+
+http://192.168.1.100:5000
+
+Replace the IP address with your Raspberry Pi's actual address.
+
+## Useful Troubleshooting Commands
+
+Check Available Storage
+
+df -h
+
+Check Connected USB Devices
+
+lsusb
+
+Check Available Camera Devices
+
+ls /dev/video*
+
+Verify Python Environment
+
+which python
+
+Verify Installed Packages
+
+pip list
+
+## Prediction Pipeline
+
+Browser Camera
+       │
+       ▼
+ Image Capture
+       │
+       ▼
+  Flask Backend
+       │
+       ▼
+Image Preprocessing
+       │
+       ▼
+ MobileNetV2 Model
+       │
+       ▼
+ Waste Classification
+       │
+       ▼
+ Prediction Result
+       │
+       ▼
+  Web Interface
+
+## Before inference:
+
+Images are resized to 224 × 224
+
+MobileNetV2 preprocessing is applied
+
+Prediction confidence is calculated
+
+Results are returned to the browser
 ## Baseline Evaluation
 
 Baseline model performance, per-class accuracy, and the confusion matrix are documented in:
 
 [BASELINE_RESULTS.md](BASELINE_RESULTS.md)
+
+
+## Fine-Tuned MobileNetV2 (Issue #13)
+
+The baseline MobileNetV2 model was improved using a two-stage training process:
+
+1. **Initial training:** Train the classification head for 10 epochs while keeping the pretrained MobileNetV2 layers frozen.
+2. **Fine-tuning:** Unfreeze the last 30 MobileNetV2 layers and continue training for 5 epochs using a learning rate of 0.00001.
+
+### Results
+
+| Model | Validation Accuracy |
+|---|---|
+| Original baseline (5 epochs) | 88.98% |
+| Extended training (10 epochs) | 89.80% |
+| Fine-tuned MobileNetV2 | **93.16%** |
+
+Fine-tuning improved validation accuracy by 4.18 percentage points compared with the original baseline.
+
+### Reproduce Training
+
+Run:
+
+```bash
+python ml/train_final_mobilenetv2.py
+```
+
+The script trains the classification head, saves and reloads the intermediate model, and performs fine-tuning.
+
+The final model is saved as `ml/waste_classifier_mobilenetv2_final.keras`.
+
+### Limitations
+
+Validation results are based on MWCD. Independent real-world testing is still needed to assess performance under different lighting, backgrounds, and camera conditions.
+
+Trained model files are not included in Git.
