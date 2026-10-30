@@ -14,7 +14,8 @@ def trigger_capture(direction="middle"):
     events = {
         "middle": "CAPTURE",
         "left": "LEFT",
-        "right": "RIGHT", "up": "UP"
+        "right": "RIGHT",
+        "up": "UP"
     }
     event_queue.put(events[direction])
 
@@ -38,7 +39,7 @@ def status():
 
     return jsonify({
         "ml_ready": False,
-        "message": "Real ML Model not found. Running in Mock fallback mode."
+        "message": "ML model is unavailable. Classification is disabled."
     })
 
 
@@ -56,7 +57,17 @@ def detect():
 
     result = detect_recycling(image_data)
 
-    if result and result.get("label"):
+    # Only show material-specific LED feedback for accepted predictions.
+    valid_materials = {
+        "Cardboard", "Glass", "Metal",
+        "Organic", "Paper", "Plastic"
+    }
+
+    if (
+        result
+        and result.get("uncertain") is False
+        and result.get("label") in valid_materials
+    ):
         hw_input.display_material(result["label"])
 
     return jsonify(result)

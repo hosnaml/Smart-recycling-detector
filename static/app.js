@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultTitle = document.getElementById('result-title');
     const resultDesc = document.getElementById('result-desc');
     const resultIcon = document.getElementById('result-icon');
-    
+
     // Q&A Elements
     const qaSection = document.getElementById('qa-section');
     const qaQuestion = document.getElementById('qa-question');
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             const toastEl = document.getElementById('statusToast');
             const toastMsg = document.getElementById('toastMessage');
-            
+
             toastMsg.textContent = data.message;
             if (data.ml_ready) {
                 toastEl.classList.add('bg-success');
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 toastEl.classList.remove('text-white');
                 toastEl.querySelector('.btn-close').classList.remove('btn-close-white');
             }
-            
+
             const toast = new bootstrap.Toast(toastEl, { delay: 6000 });
             toast.show();
         })
@@ -176,6 +176,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeCamera();
 
+    // Match the visible guide to the actual 55% center crop.
+    function updateCaptureGuide() {
+        if (!video.videoWidth || !video.videoHeight) return;
+
+        const videoRect = video.getBoundingClientRect();
+        const container = video.closest('.viewfinder-container');
+        const containerRect = container.getBoundingClientRect();
+        const reticle = container.querySelector('.reticle');
+
+        if (!reticle || !videoRect.width || !videoRect.height) return;
+
+        // object-fit: cover scales the camera image to fill the video.
+        const scale = Math.max(
+            videoRect.width / video.videoWidth,
+            videoRect.height / video.videoHeight
+        );
+
+        const cropPixels =
+            Math.floor(Math.min(video.videoWidth, video.videoHeight) * 0.55);
+
+        const displayedCropSize = cropPixels * scale;
+
+        reticle.style.width = displayedCropSize + 'px';
+        reticle.style.height = displayedCropSize + 'px';
+
+        reticle.style.left =
+            (videoRect.left - containerRect.left +
+             videoRect.width / 2) + 'px';
+
+        reticle.style.top =
+            (videoRect.top - containerRect.top +
+             videoRect.height / 2) + 'px';
+
+        reticle.style.transform = 'translate(-50%, -50%)';
+    }
+
+    video.addEventListener('loadedmetadata', updateCaptureGuide);
+    window.addEventListener('resize', updateCaptureGuide);
+
+    if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(updateCaptureGuide).observe(video);
+    }
+
+    updateCaptureGuide();
+
+
     // 2. Capture and Send to Backend
     const captureAndDetect = async () => {
         if (isScanning || !video.srcObject) return;
@@ -206,9 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
             cropX, cropY, cropSize, cropSize,
             0, 0, 224, 224
         );
-        
+
         // Convert to base64 JPEG
         const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+
+
 
         try {
             const response = await fetch('/detect', {
@@ -216,15 +265,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: imageData })
             });
-            
+
             if (!response.ok) throw new Error("Server error");
             const result = await response.json();
-            
+
             // UI: Display Result
             resultIcon.textContent = categoryIcons[result.label] || '📦';
-            resultTitle.textContent = result.label;
+            resultTitle.textContent = result.label +
+                (typeof result.confidence === 'number'
+                    ? ` (${result.confidence.toFixed(2)}% confidence)`
+                    : '');
             resultTitle.className = `fw-bold mb-2 display-6 text-${result.color}`;
-            
+
             // Reset visibility
             resultDesc.style.display = 'none';
             qaSection.style.display = 'none';
@@ -233,14 +285,24 @@ document.addEventListener('DOMContentLoaded', () => {
             currentOptionsMap = {};
 
             // Check if we have interactive Q&A for this material
-            if (QA_DATABASE[result.label]) {
+            if (result.uncertain === true || result.label === 'Uncertain' ||
+                    result.label === 'Error' || result.error) {
+                inQAState = false;
+                resultIcon.textContent = result.uncertain ? '❓' : '⚠️';
+                resultTitle.className = result.uncertain
+                    ? 'fw-bold mb-2 display-6 text-warning'
+                    : 'fw-bold mb-2 display-6 text-danger';
+                resultDesc.textContent = result.instructions ||
+                    result.error || 'Please try another photo.';
+                resultDesc.style.display = 'block';
+            } else if (QA_DATABASE[result.label]) {
                 inQAState = true;
                 const qaData = QA_DATABASE[result.label];
                 qaQuestion.textContent = qaData.question;
-                
+
                 qaData.options.forEach(opt => {
                     currentOptionsMap[opt.direction] = opt.text;
-                    
+
                     const col = document.createElement('div');
                     col.className = 'col-sm-6 col-md-4';
                     col.innerHTML = `
@@ -251,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                     qaOptionsContainer.appendChild(col);
                 });
-                
+
                 qaSection.style.display = 'block';
             } else {
                 // Standard fallback (e.g. Organic, Trash)
@@ -259,10 +321,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultDesc.textContent = result.instructions;
                 resultDesc.style.display = 'block';
             }
-            
+
             // Trigger reflow to restart CSS animation
             resultCard.classList.remove('result-pop');
-            void resultCard.offsetWidth; 
+            void resultCard.offsetWidth;
             resultCard.classList.add('result-pop');
             resultCard.style.display = 'block';
 
@@ -280,6 +342,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Manual Button Click
     captureBtn.addEventListener('click', captureAndDetect);
+
+    // Keyboard Fallback (Enter key to scan, Arrows to answer Q&A)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // If in Q&A state, reset and scan again. Otherwise, just scan.
+            if (inQAState) {
+                inQAState = false;
+                resultCard.style.display = 'none';
+            }
+            captureAndDetect();
+        } else if (inQAState && currentOptionsMap[e.key]) {
+            e.preventDefault();
+
+            // Highlight selected option visually
+            document.querySelectorAll('.qa-option-card').forEach(el => el.classList.remove('active'));
+            const selectedCard = document.getElementById(`opt-${e.key}`);
+            if (selectedCard) selectedCard.classList.add('active');
+
+            // Display final instruction
+            finalInstruction.textContent = currentOptionsMap[e.key];
+            finalInstruction.style.display = 'block';
+
+            // End Q&A state so arrows don't trigger again until next scan
+            inQAState = false;
+        }
+    });
 
     // Server-Sent Events (Hardware Joystick trigger via backend)
     const evtSource = new EventSource("/events");
@@ -301,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }));
         }
     };
-    
+
     evtSource.onerror = function(err) {
         console.error("EventSource failed:", err);
     };

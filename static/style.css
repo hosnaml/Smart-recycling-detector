@@ -86,3 +86,42 @@ body {
     color: #495057;
     margin-bottom: 8px;
 }
+
+
+/* Compact layout for the final presentation */
+.viewfinder-container {
+    height: clamp(230px, 40vh, 340px);
+    min-height: 0;
+}
+
+#camera-stream {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#action-container {
+    margin-bottom: 12px !important;
+}
+
+#result-card .display-1 {
+    font-size: 2.5rem;
+}
+
+#result-title {
+    font-size: 1.5rem !important;
+}
+
+#qa-section {
+    margin-top: 10px !important;
+    padding-top: 10px !important;
+}
+
+#qa-question {
+    margin-bottom: 10px !important;
+}
+
+.qa-option-card {
+    padding: 8px;
+}
