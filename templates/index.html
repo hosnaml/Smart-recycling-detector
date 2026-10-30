@@ -10,16 +10,16 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="bg-light">
-    <div class="container py-5">
-        <header class="text-center mb-5">
-            <h1 class="display-5 fw-bold text-success">♻️ Smart Recycling</h1>
+    <div class="container py-2">
+        <header class="text-center mb-3">
+            <h1 class="h2 fw-bold text-success">♻️ Smart Recycling</h1>
             <p class="lead text-muted">Show your item to the camera. Press <strong>Enter</strong> on your keyboard or push the <strong>Joystick</strong> to scan.</p>
         </header>
         
         <div class="row justify-content-center">
             <div class="col-md-10 col-lg-8">
                 <!-- Camera Viewfinder -->
-                <div class="card shadow-lg border-0 mb-4 bg-dark text-white rounded-4 overflow-hidden position-relative viewfinder-container">
+                <div class="card shadow-lg border-0 mb-2 bg-dark text-white rounded-4 overflow-hidden position-relative viewfinder-container">
                     <!-- Video stream from webcam/phone -->
                     <video id="camera-stream" autoplay playsinline class="w-100 h-100 object-fit-cover"></video>
                     <!-- Hidden canvas to capture frames -->
@@ -36,14 +36,14 @@
                 </div>
 
                 <!-- Manual Trigger Button -->
-                <div class="text-center mb-5" id="action-container">
+                <div class="text-center mb-3" id="action-container">
                     <button id="capture-btn" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm fw-bold">
                         📷 Scan Now
                     </button>
                 </div>
 
                 <!-- Results Display -->
-                <div id="result-card" class="card shadow-lg border-0 rounded-4 text-center p-5 result-pop" style="display: none;">
+                <div id="result-card" class="card shadow-lg border-0 rounded-4 text-center p-3 result-pop" style="display: none;">
                     <div class="mb-3">
                         <span id="result-icon" class="display-1">📦</span>
                     </div>
